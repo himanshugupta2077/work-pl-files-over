@@ -1,20 +1,13 @@
-PS C:\WINDOWS\system32> powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downloads\install-pilot-certificate.ps1"
-CA "Intermediate Certification Authorities"
-Signature matches Public Key
-Certificate "PL Zero Trust Pilot Client CA 2026-11" added to store.
-CertUtil: -addstore command completed successfully.
-
-
-    A certificate issued by the certification authority cannot be installed. Contact your administrator.
-    A certificate chain processed, but terminated in a root certificate which is not trusted by the trust provider. 0x800b0109 (-2146762487 CERT_E_UNTRUSTEDROOT)
-
-
-Certificate Request Processor: A certificate chain processed, but terminated in a root certificate which is not trusted by the trust provider. 0x800b0109 (-2146762487 CERT_E_UNTRUSTEDROOT)
-Certificate acceptance failed. Send the error.
-At C:\Users\Himanshu Mehta\Downloads\install-pilot-certificate.ps1:64 char:28
-+ ... ODE -ne 0) { throw 'Certificate acceptance failed. Send the error.' }
-+                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : OperationStopped: (Certificate acc...Send the error.:String) [], RuntimeException
-    + FullyQualifiedErrorId : Certificate acceptance failed. Send the error.
-
-PS C:\WINDOWS\system32>
+& {
+    $root = Join-Path ([Environment]::GetFolderPath('Desktop')) 'PL-ZT-Pilot\pl-pilot-ca.cer'
+    $ca = [Security.Cryptography.X509Certificates.X509Certificate2]::new($root)
+    $sha = [Security.Cryptography.SHA256]::Create()
+    $hash = [BitConverter]::ToString($sha.ComputeHash($ca.RawData)).Replace('-', '')
+    $sha.Dispose()
+    if ($hash -ne '0EB6B9C760EE3342B17A7156DF2A0156991415139D57EA266BE08EE35FA7EDFE') {
+        throw 'Certificate mismatch. Stop.'
+    }
+    certutil.exe -user -addstore Root $root
+    if ($LASTEXITCODE -ne 0) { throw 'Trust installation failed.' }
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downloads\install-pilot-certificate.ps1"
+}
